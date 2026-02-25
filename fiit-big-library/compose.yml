@@ -1,0 +1,88 @@
+# для локального запуска тестов в гриде 
+services:
+  selenium-hub:
+    container_name: fiit-selenium-hub
+    image: selenium/hub:4.11.0
+    ports:
+      - "4442:4442"
+      - "4443:4443"
+      - "4444:4444"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4444/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      - SE_LOG_LEVEL=INFO
+      - HUBHOST=selenium-hub
+    networks:
+      - fiit-network
+
+  chrome-node:
+    container_name: fiit-chrome-node
+    image: selenium/node-chrome:4.11.0
+    shm_size: 4gb
+    depends_on:
+        selenium-hub:
+          condition: service_healthy
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_NODE_GRID_URL=http://selenium-hub:4444
+      - SE_NODE_HOST=chrome-node
+      - SE_NODE_PORT=5555
+      - SE_NODE_MAX_SESSIONS=6
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+      - SE_NODE_ENABLE_VNC=true
+      - SE_VNC_NO_PASSWORD=1
+    networks:
+      - fiit-network
+
+  fiit-service:
+    depends_on:
+      - selenium-hub
+      - chrome-node
+    container_name: fiit-service
+    build: .
+    ports:
+      - "5000:5000"
+    expose:
+      - 5000    
+    networks:
+      - fiit-network
+
+  tests:
+    container_name: fiit-ui-tests
+    depends_on:
+      - fiit-service
+    image: mcr-proxy.kontur.host/dotnet/sdk:8.0
+    environment:
+      - SELENIUM_GRID_URL=http://selenium-hub:4444
+      - FIIT_SERVICE_URL=http://fiit-service:5000  
+    volumes:
+    - .:/app
+    working_dir: /app
+    command: 
+      - sh
+      - -c
+      - |
+        while ! curl -s -o /dev/null -w "%{http_code}" http://fiit-service:5000 | grep -q "200"; do
+          echo 'Waiting for fiit-service...'; 
+          sleep 10; 
+        done 
+        apt-get update &&
+        apt-get install -y curl &&
+        curl -sL https://deb.nodesource.com/setup_16.x | bash - &&
+        apt-get install -y nodejs &&
+        node -v &&
+        npm config set registry https://nexus.kontur.host/repository/kontur-npm-group/ &&
+        pwd &&
+        dotnet build Source/Kontur.BigLibrary.Tests.UI/Kontur.BigLibrary.Tests.UI.csproj &&
+        dotnet test Source/Kontur.BigLibrary.Tests.UI/bin/Debug/net8.0/Kontur.BigLibrary.Tests.UI.dll
+    networks:
+      - fiit-network
+
+networks:
+  fiit-network:
+    driver: bridge

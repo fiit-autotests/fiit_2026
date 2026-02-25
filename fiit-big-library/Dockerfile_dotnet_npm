@@ -1,0 +1,14 @@
+
+FROM mcr-proxy.kontur.host/dotnet/sdk:8.0 AS build
+
+WORKDIR /app
+COPY . . 
+
+# Устанавливаем curl, скачиваем и устанавливаем Node.js 16 версии, которая используется в проекте
+# В нашем случае из-за политики безопасности компании также надо задать registry
+RUN apt-get update \
+    && apt-get install -y curl \
+    && curl -sL https://deb.nodesource.com/setup_16.x | bash - \
+    && apt-get install -y nodejs \
+    && npm config set registry https://nexus.kontur.host/repository/kontur-npm-group/ --global \
+    && rm -rf /var/lib/apt/lists/*

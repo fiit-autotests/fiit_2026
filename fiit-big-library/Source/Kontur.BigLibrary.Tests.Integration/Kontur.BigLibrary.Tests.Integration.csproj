@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <IsPackable>false</IsPackable>
+        <LangVersion>12</LangVersion>
+    </PropertyGroup>
+    
+    <ItemGroup>
+        <PackageReference Include="Dapper" Version="2.0.30" />
+        <PackageReference Include="FluentAssertions" Version="7.2.0" />
+        <PackageReference Include="JunitXml.TestLogger" Version="6.1.0" />
+        <PackageReference Include="NSubstitute" Version="4.2.1" />
+        <PackageReference Include="nunit" Version="3.14.0" />
+        <PackageReference Include="NUnit3TestAdapter" Version="3.13.0" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.2.0" />
+        <PackageReference Include="RestSharp" Version="110.2.1-alpha.0.13" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Kontur.BigLibrary.Service\Kontur.BigLibrary.Service.csproj" />
+      <ProjectReference Include="..\Kontur.BigLibrary.Tests.Core\Kontur.BigLibrary.Tests.Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="Files\exportBooks.xml">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+</Project>

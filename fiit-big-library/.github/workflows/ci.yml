@@ -1,0 +1,144 @@
+name: Fiit Tests
+
+env:
+  UNITS_PROJECT_ADDRESS: unit-tests-example
+  LIBRARY_PROJECT_ADDRESS: fiit-big-library
+
+permissions:
+  id-token: write
+  contents: read
+  checks: write
+
+on:
+  push:
+
+jobs:
+  unit_tests_example:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.x
+
+      - name: Build solution
+        run: dotnet build ${{ env.UNITS_PROJECT_ADDRESS }}/Examples.sln -c Debug
+
+      - name: HW1 UserValidatorsTests
+        if: always()
+        run: |
+          dotnet test ${{ env.UNITS_PROJECT_ADDRESS }}/UserValidatorsTests/UserValidatorsTests.csproj \
+          -c Debug \
+          --logger "trx;LogFileName=UserValidatorsTests.trx" \
+          --verbosity normal
+
+      - name: HW2 UserManagerTests
+        if: always()
+        run: |
+          dotnet test ${{ env.UNITS_PROJECT_ADDRESS }}/UserManagerTests/UserManagerTests.csproj \
+          -c Debug \
+          --logger "trx;LogFileName=TestUserManagerResults.trx" \
+          --verbosity normal
+
+      - name: Homework 1
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Homework 1
+          path: "${{ env.UNITS_PROJECT_ADDRESS }}/**/TestResults/UserValidatorsTests.trx"
+          reporter: "dotnet-trx"
+
+      - name: Homework 2
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Homework 2
+          path: "${{ env.UNITS_PROJECT_ADDRESS }}/**/TestResults/TestUserManagerResults.trx"
+          reporter: "dotnet-trx"
+
+  library_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0"
+
+      - name: Install Node.js and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl
+          curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+          sudo apt-get install -y nodejs
+          sudo rm -rf /var/lib/apt/lists/*
+
+      - name: HW3 BookServiceTests
+        if: always()
+        run: |
+          dotnet test ${{ env.LIBRARY_PROJECT_ADDRESS }}/Source/Kontur.BigLibrary.Tests.Integration/Kontur.BigLibrary.Tests.Integration.csproj --filter "BookServiceTests" -c Debug --logger "trx;LogFileName=BookServiceTests.trx" 
+
+      - name: HW4 BookRepositoryTests
+        if: always()
+        run: | 
+          dotnet test ${{ env.LIBRARY_PROJECT_ADDRESS }}/Source/Kontur.BigLibrary.Tests.Integration/Kontur.BigLibrary.Tests.Integration.csproj --filter "BookRepositoryTests" -c Debug --logger "trx;LogFileName=BookRepositoryTests.trx" 
+
+      - name: HW5 ApiTests
+        if: always()
+        run: |
+          dotnet test ${{ env.LIBRARY_PROJECT_ADDRESS }}/Source/Kontur.BigLibrary.Tests.Integration/Kontur.BigLibrary.Tests.Integration.csproj --filter "ApiTests" -c Debug --logger "trx;LogFileName=ApiTests.trx"
+      
+      - name: HW5 CompareDocsTests
+        if: always()
+        run: |
+          dotnet test ${{ env.LIBRARY_PROJECT_ADDRESS }}/Source/Kontur.BigLibrary.Tests.Integration/Kontur.BigLibrary.Tests.Integration.csproj --filter "CompareDocsTests" -c Debug --logger "trx;LogFileName=CompareDocsTests.trx" 
+
+      - name: HW6 SystemApiHomework 
+        if: always()
+        run: |
+          dotnet test ${{ env.LIBRARY_PROJECT_ADDRESS }}/Source/Kontur.BigLibrary.Tests.ApiSystem/Kontur.BigLibrary.Tests.ApiSystem.csproj --filter "SystemApiHomework" -c Debug --logger "trx;LogFileName=SystemApiHomework.trx" 
+
+      - name: Homework 3
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Homework 3
+          path: "${{ env.LIBRARY_PROJECT_ADDRESS }}/**/TestResults/BookServiceTests.trx"
+          reporter: "dotnet-trx"
+
+      - name: Homework 4
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Homework 4
+          path: "${{ env.LIBRARY_PROJECT_ADDRESS }}/**/TestResults/BookRepositoryTests.trx"
+          reporter: "dotnet-trx"
+
+      - name: Homework 5.1 ApiTests
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Homework 5.1 ApiTests
+          path: "${{ env.LIBRARY_PROJECT_ADDRESS }}/**/TestResults/ApiTests.trx"
+          reporter: "dotnet-trx"
+
+      - name: Homework 5.2 CompareDocsTests
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Homework 5.2 CompareDocsTests
+          path: "${{ env.LIBRARY_PROJECT_ADDRESS }}/**/TestResults/CompareDocsTests.trx"
+          reporter: "dotnet-trx"
+
+      - name: Homework 6 
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Homework 6
+          path: "${{ env.LIBRARY_PROJECT_ADDRESS }}/**/TestResults/SystemApiHomework.trx"
+          reporter: "dotnet-trx"

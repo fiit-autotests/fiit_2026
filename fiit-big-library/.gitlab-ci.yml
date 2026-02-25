@@ -1,0 +1,132 @@
+# Чтобы избежать дублирования, общую логику описываем в отдельных файлах
+# Затем включаем ее в наш файл через include и используем фрагменты при помощи extends
+# См. https://docs.gitlab.com/ci/yaml/yaml_optimization/
+include:
+  - project: idevops/ci-templates
+    file: all.yaml
+
+# В рамках стейджа может быть несколько джоб (и джоба всегда относится к определенному стейджу)
+stages:
+  - common
+  - tests
+
+variables:
+  # Чтобы не затереть старый образ, а создать новый - в качестве тега используем часть CI_COMMIT_SHA
+  # Это одна из predefined переменных гитлаба - https://docs.gitlab.com/ci/variables/predefined_variables/
+  DOTNET_NPM_IMAGE_NAME: dotnet-npm
+  PLAYWRIGHT_IMAGE_NAME: playwright-chrome
+  UNIT_TESTS_LOCATION: Source\Kontur.BigLibrary.Tests.Unit\Kontur.BigLibrary.Tests.Unit.csproj
+  INTEGRATION_TESTS_LOCATION: Source\Kontur.BigLibrary.Tests.Integration\Kontur.BigLibrary.Tests.Integration.csproj
+  SYSTEM_API_TESTS_LOCATION: Source\Kontur.BigLibrary.Tests.ApiSystem\Kontur.BigLibrary.Tests.ApiSystem.csproj
+  CI_DEBUG_TRACE: "false" # подробные логи при запуске джоб
+  
+# Если будем делать несколько коммитов подряд - хотим прерывать джобы из прошлого пайплайна
+# Но только те, у которых явно указано, что interruptible: true
+workflow:
+  auto_cancel:
+    on_new_commit: conservative  
+
+# Как правило, джобы в гитлабе выполняются в докер-контейнерах на основе определенного образа
+# Для удобства мы создаем кастомный образ, в котором есть и dotnet и npm - оба нужны для билда
+'Build dotnet_npm image':
+  stage: common
+  extends: .docker_build_image # Поскольку это типовая задача, используем hidden job из файлика от девопсов - all.yaml
+  variables:
+    DOCKER_IMAGE_TAG: $CI_COMMIT_SHORT_SHA
+    DOCKER_IMAGE_NAME: $REGISTRY_FOLDER/$DOTNET_NPM_IMAGE_NAME
+    DOCKER_DOCKERFILE: "Dockerfile_dotnet_npm" # Сам образ описан в отдельном докерфайле 
+    DOCKER_PUSH_LATEST: "true" 
+  needs: [ ]
+  when: manual # Запускаем только при изменениях версий дотнета и npm 
+
+'Build playwright image':
+  stage: common
+  extends: .docker_build_image
+  variables:
+    DOCKER_IMAGE_TAG: $CI_COMMIT_SHORT_SHA
+    DOCKER_IMAGE_NAME: $REGISTRY_FOLDER/$PLAYWRIGHT_IMAGE_NAME
+    DOCKER_DOCKERFILE: "Dockerfile_playwright" 
+    DOCKER_PUSH_LATEST: "true"
+  needs: [ ]
+  when: manual
+
+'Unit tests':
+  image: $REGISTRY_FOLDER/$DOTNET_NPM_IMAGE_NAME:latest
+  stage: tests
+  script:
+    # Чтобы NUnit генерировал документы в формате junit, мы подключили к проекту библиотеку JunitXml.TestLogger
+    - dotnet test $UNIT_TESTS_LOCATION --logger "junit;LogFileName=UnitTests.xml" --results-directory TestResults
+  artifacts:
+    when: always # храним артефакты, даже если тесты упали
+    expire_in: "15 days"
+    reports:
+      junit: TestResults/UnitTests.xml # так мы формируем отчеты в гитлабе 
+    paths: 
+      - "TestResults/UnitTests.xml" # и сохраняем в папочке (это нужно нам в том числе для визуализации в сервисе https://testcity.kube.testkontur.ru/fiit)
+  allow_failure: true # если юниты упадут, не запрещаем запускать джобы в следующих тестах
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never
+    - when: always # по умолчанию джоба запускается
+  interruptible: true
+
+'Integration tests':
+  image: $REGISTRY_FOLDER/$DOTNET_NPM_IMAGE_NAME:latest
+  stage: tests
+  script:
+    - dotnet test $INTEGRATION_TESTS_LOCATION --logger "junit;LogFileName=IntegrationTests.xml" --results-directory TestResults
+  artifacts:
+    when: always 
+    expire_in: "15 days" 
+    reports:
+      junit: TestResults/IntegrationTests.xml 
+    paths: 
+      - "TestResults/IntegrationTests.xml"
+  allow_failure: false
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"' # не запускаем для МР, а то будут дублироваться пайплайны 
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "schedule" # при запуске по графику - запускаем всегда
+      when: always
+    - when: manual # в обычной ситуации запускаем, только если пользователь нажал кнопку
+  interruptible: true
+
+'System API Tests':
+  image: $REGISTRY_FOLDER/$DOTNET_NPM_IMAGE_NAME:latest
+  stage: tests
+  script:
+    - dotnet test $SYSTEM_API_TESTS_LOCATION --logger "junit;LogFileName=SystemApiTests.xml" --results-directory TestResults
+  artifacts:
+    when: always
+    expire_in: "15 days"
+    reports:
+      junit: TestResults/SystemApiTests.xml
+    paths: 
+      - "TestResults/SystemApiTests.xml"
+  allow_failure: false
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: always
+    - when: manual
+  interruptible: true
+
+'Browser Tests':
+  stage: tests
+  needs: []
+  trigger:
+    strategy: mirror
+    include:
+      - local: CI/browser-tests-pipeline.yml
+    forward:
+      pipeline_variables: true
+  variables:
+    PARENT_COMMIT_MESSAGE: "$CI_COMMIT_MESSAGE"
+  allow_failure: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: always
+    - when: manual
