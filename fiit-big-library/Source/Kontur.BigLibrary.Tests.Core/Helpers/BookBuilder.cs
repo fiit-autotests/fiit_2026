@@ -53,6 +53,7 @@ public class BookBuilder
         Name = name ?? $"Default_name{IntGenerator.Get()}",
         Author = author ?? $"Default_author{IntGenerator.Get()}",
         Id = id ?? IntGenerator.Get(),
+        Description = "",
         IsDeleted = isDeleted,
         RubricId = rubricId,
         ImageId = imageId,
