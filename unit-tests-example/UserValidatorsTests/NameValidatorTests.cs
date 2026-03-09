@@ -10,7 +10,7 @@ public class NameValidatorTests
     private readonly NameValidator _validator = new();
 
     [TestCaseSource(nameof(MultiplyCases))]
-    public bool IsValid_NameValidation_ReturnsExpectedResult(string name) => _validator.IsValid(name);
+    public bool Validate_Name_ReturnsIsValid(string name) => _validator.IsValid(name);
 
     private static IEnumerable<TestCaseData> MultiplyCases()
     {
