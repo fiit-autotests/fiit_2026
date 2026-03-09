@@ -44,7 +44,7 @@ public class NameValidatorTests
     }
     
     [Test]
-    public void IsValid_ThrowsArgumentNullException_WhenNameIsNull()
+    public void IsValid_ShouldThrowArgumentNullException_WhenNameIsNull()
     {
         Assert.Throws<ArgumentNullException>(() => _validator.IsValid(null), 
             "Expected ArgumentNullException exception to be thrown.");

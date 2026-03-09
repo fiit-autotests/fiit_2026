@@ -57,7 +57,7 @@ public class EmailValidatorTests
     }
     
     [Test]
-    public void IsValid_ThrowsArgumentNullException_WhenEmailIsNull()
+    public void IsValid_ShouldThrowArgumentNullException_WhenEmailIsNull()
     {
         Assert.Throws<ArgumentNullException>(() => _validator.IsValid(null), 
             "Expected ArgumentNullException exception to be thrown.");
