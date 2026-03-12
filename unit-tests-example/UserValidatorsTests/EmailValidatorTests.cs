@@ -3,7 +3,6 @@ using UserCreatorTask.UserValidators;
 
 namespace UserValidatorTests;
 
-[Parallelizable(ParallelScope.Fixtures)]
 public class EmailValidatorTests
 {
     private readonly EmailValidator _validator = new();
@@ -59,7 +58,6 @@ public class EmailValidatorTests
     [Test]
     public void IsValid_ShouldThrowArgumentNullException_WhenEmailIsNull()
     {
-        Assert.Throws<ArgumentNullException>(() => _validator.IsValid(null), 
-            "Expected ArgumentNullException exception to be thrown.");
+        Assert.That(() => _validator.IsValid(null), Throws.ArgumentNullException, "email value can't be null");
     }
 }

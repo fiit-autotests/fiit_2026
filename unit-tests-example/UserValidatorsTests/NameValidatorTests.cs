@@ -1,10 +1,8 @@
 ﻿using NUnit.Framework;
-using UserCreatorTask;
 using UserCreatorTask.UserValidators;
 
 namespace UserValidatorTests;
 
-[Parallelizable(ParallelScope.Fixtures)]
 public class NameValidatorTests
 {
     private readonly NameValidator _validator = new();
@@ -46,7 +44,6 @@ public class NameValidatorTests
     [Test]
     public void IsValid_ShouldThrowArgumentNullException_WhenNameIsNull()
     {
-        Assert.Throws<ArgumentNullException>(() => _validator.IsValid(null), 
-            "Expected ArgumentNullException exception to be thrown.");
+        Assert.That(() => _validator.IsValid(null), Throws.ArgumentNullException, "name value can't be null");
     }
 }

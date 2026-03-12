@@ -38,7 +38,6 @@ public class PasswordValidatorTests
     [NonParallelizable]
     public void IsValid_ShouldThrowArgumentNullException_WhenPasswordIsNull()
     {
-        Assert.Throws<ArgumentNullException>(() => _validator.IsValid(null),
-            "Expected ArgumentNullException exception to be thrown.");
+        Assert.That(() => _validator.IsValid(null), Throws.ArgumentNullException, "password value can't be null");
     }
 }
